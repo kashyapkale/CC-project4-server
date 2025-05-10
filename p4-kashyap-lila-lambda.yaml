@@ -1,0 +1,94 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: p4 - GenAI Lecture Assistant Lambda (Upload + Notes Generation)
+
+Parameters:
+  VpcId:      { Type: AWS::EC2::VPC::Id }
+  Subnet1:    { Type: AWS::EC2::Subnet::Id }
+  LambdaSG:   { Type: AWS::EC2::SecurityGroup::Id }
+
+Globals:
+  Function:
+    Runtime: java17
+    MemorySize: 1024
+    Timeout: 60
+    CodeUri:
+      Bucket: p4-kashyap-lila-bucket
+      Key: artifacts/genai-lecture-assistant.jar
+    Layers: [ !Ref MySqlLayer ]
+    VpcConfig:
+      SubnetIds:        [ !Ref Subnet1 ]
+      SecurityGroupIds: [ !Ref LambdaSG ]
+    Environment:
+      Variables:
+        DB_HOST:       p4-database-kashyapkale.cdi4q60eubti.us-east-2.rds.amazonaws.com
+        DB_NAME:       p4_kashyapkale
+        DB_USER:       root
+        DB_PASS:       Rootroot1234
+        DEST_BUCKET:   p4-kashyap-lila-bucket
+        SNS_TOPIC_ARN: arn:aws:sns:us-east-2:533267166611:sns-kashyap-lila-topic
+
+Resources:
+
+  MySqlLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: p4-mysql-layer-kashyap
+      CompatibleRuntimes: [java17]
+      ContentUri:
+        Bucket: p4-kashyap-lila-bucket
+        Key: artifacts/mysql-layer.zip
+
+  UploadTranscriptFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: p4-uploadTranscript-kashyap
+      Handler: com.genai.handler.UploadLambdaHandler::handleRequest
+      Policies:
+        - S3CrudPolicy:
+            BucketName: p4-kashyap-lila-bucket
+        - Statement:
+            - Effect: Allow
+              Action: sns:Publish
+              Resource: arn:aws:sns:us-east-2:533267166611:sns-kashyap-lila-topic
+
+  NotesGenerationFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: p4-notesGeneration-kashyap
+      Handler: com.genai.handler.NotesGenerationLambdaHandler::handleRequest
+      Events:
+        SnsTrigger:
+          Type: SNS
+          Properties:
+            Topic: arn:aws:sns:us-east-2:533267166611:sns-kashyap-lila-topic
+      Policies:
+        - S3CrudPolicy:
+            BucketName: p4-kashyap-lila-bucket
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource: arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-3-haiku-20240307-v1:0
+
+  ListLecturesFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: p4-listLectures-kashyap
+      Handler: com.genai.handler.ListLecturesHandler::handleRequest
+      Policies:
+        - S3ReadPolicy:
+            BucketName: p4-kashyap-lila-bucket
+
+Outputs:
+  UploadTranscriptArn:
+    Description: ARN for Upload Lambda
+    Value: !GetAtt UploadTranscriptFn.Arn
+    Export:
+      Name: p4-UploadTranscriptArn
+
+  NotesGenerationArn:
+    Description: ARN for Notes Generator Lambda
+    Value: !GetAtt NotesGenerationFn.Arn
+    Export:
+      Name: p4-NotesGenerationArn

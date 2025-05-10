@@ -1,0 +1,4 @@
+com/genai/handler/ListLecturesHandler.class
+com/genai/handler/NotesGenerationLambdaHandler.class
+com/genai/util/DBUtil.class
+com/genai/handler/UploadLambdaHandler.class

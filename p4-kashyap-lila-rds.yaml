@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  p4-kashyapkale – RDS MySQL (single stack, free-tier, default VPC)
+
+###############################################################################
+# 1️⃣  PARAMETERS                                                              #
+###############################################################################
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "Choose the **default** VPC (required by course rules)."
+
+  Subnet1:
+    Type: AWS::EC2::Subnet::Id
+    Description: "First subnet (AZ-A) in the default VPC."
+
+  Subnet2:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Second subnet (AZ-A) in the default VPC."
+
+  DbIdentifier:
+    Type: String
+    Default: p4-database-kashyapkale
+    Description: "DBInstanceIdentifier (must stay unique per account)."
+
+  DbInstanceClass:
+    Type: String
+    Default: db.t3.micro          # Free-tier class in us-east-2
+    AllowedValues:
+      - db.t3.micro
+
+  DbStorageGB:
+    Type: Number
+    Default: 20
+    Description: "Allocated storage (GB). Keep <= 20 for free tier."
+
+###############################################################################
+# 2️⃣  SECURITY GROUP – opens port 3306                                        #
+###############################################################################
+Resources:
+
+  MySqlSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Allow MySQL inbound for Project-4 demo"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: p4-kashyapkale-mysql-sg
+
+  ###############################################################################
+  # 3️⃣  DB SUBNET GROUP (required even for single-AZ)                           #
+  ###############################################################################
+  MyDbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnet group for Project-4 RDS"
+      DBSubnetGroupName: p4-kashyap-subnetgroup
+      SubnetIds:
+        - !Ref Subnet1
+        - !Ref Subnet2
+      Tags:
+        - Key: Project
+          Value: P4-TranscribeAPI
+
+  ###############################################################################
+  # 4️⃣  RDS INSTANCE (single-AZ, public)                                        #
+  ###############################################################################
+  MySqlDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DbIdentifier
+      Engine: mysql
+      EngineVersion: "8.0.39"
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbStorageGB
+      MasterUsername: root
+      MasterUserPassword: Rootroot1234
+      DBName: p4_kashyapkale
+      PubliclyAccessible: true              # Lambda will access via Internet
+      VPCSecurityGroups:
+        - !GetAtt MySqlSecurityGroup.GroupId
+      DBSubnetGroupName: !Ref MyDbSubnetGroup
+      DeletionProtection: false
+      Tags:
+        - Key: Project
+          Value: P4-TranscribeAPI
+
+###############################################################################
+# 5️⃣  OUTPUTS                                                                 #
+###############################################################################
+Outputs:
+  RdsEndpoint:
+    Description: "Copy this into your Lambda environment / DBUtil"
+    Value: !GetAtt MySqlDatabase.Endpoint.Address
+
+  RdsPort:
+    Description: "Default MySQL port"
+    Value: !GetAtt MySqlDatabase.Endpoint.Port
