@@ -50,7 +50,11 @@ The application follows a microservices-based, serverless architecture. A React 
 
    * **Q&A:** When a student asks a question, the request is sent to the **FAQ Lambda (RAG/QA)**. This function converts the question into an embedding, queries the FAISS Vector DB to find the most relevant context from the lecture, and then uses Amazon Bedrock to generate a precise answer.
 
-## ✨ Features
+## Architecture Diagram
+
+![Architecture Diagram](assets/arch.jpeg)
+
+## Features
 
 * **Serverless & Scalable:** Built with AWS Lambda to handle requests without managing servers.
 
@@ -62,7 +66,7 @@ The application follows a microservices-based, serverless architecture. A React 
 
 * **Centralized Metadata Storage:** Uses Amazon RDS to manage lecture information efficiently.
 
-## 📁 Code Structure
+## Code Structure
 
 The repository is organized into the main Java source for Lambda handlers and a separate directory for the Python-based chat Lambda.
 
@@ -95,7 +99,7 @@ The repository is organized into the main Java source for Lambda handlers and a 
 
 * **`chat-lambda-py/`**: Houses the Python code for the user-facing Q&A functionality, which interacts with the vector database and Bedrock.
 
-## 🛠️ Deployment
+## Deployment
 
 This project is intended to be deployed using AWS SAM (Serverless Application Model) or AWS CloudFormation. The included `.yaml` files define the necessary AWS resources (Lambda functions, API Gateway endpoints, S3 buckets, IAM roles, etc.).
 
@@ -128,5 +132,4 @@ sam deploy --guided
 
 ```
 
-*This README was generated based on the project's architecture and source code structure.*
-```
+
